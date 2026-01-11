@@ -1,0 +1,12 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UE4Editor-DBTPluginTest.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"C:\Users\user\Documents\Unreal Projects\DBTPluginProject\Intermediate\Build\Win64\DBTPluginProjectEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.h.obj"
+"C:\Users\user\Documents\Unreal Projects\DBTPluginProject\Plugins\DBTPluginTest\Intermediate\Build\Win64\UE4Editor\Development\DBTPluginTest\Module.DBTPluginTest.cpp.obj"
+"C:\Users\user\Documents\Unreal Projects\DBTPluginProject\Plugins\DBTPluginTest\Intermediate\Build\Win64\UE4Editor\Development\DBTPluginTest\Default.rc2.res"
+/OUT:"C:\Users\user\Documents\Unreal Projects\DBTPluginProject\Plugins\DBTPluginTest\Intermediate\Build\Win64\UE4Editor\Development\DBTPluginTest\UE4Editor-DBTPluginTest.lib"

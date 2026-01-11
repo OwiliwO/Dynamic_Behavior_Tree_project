@@ -1,0 +1,9 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.DBTPluginTest.cpp.obj": [
+			"DBTPluginTest.cpp.obj",
+			"DynamicTaskNode.cpp.obj"
+		]
+	}
+}

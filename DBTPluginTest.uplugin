@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "DBTPluginTest",
+	"Description": "Dynamic Behavior Tree Editor Plugin (TEST)",
+	"Category": "AI",
+	"CreatedBy": "Makhonov Gleb",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "DBTPluginTest",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
