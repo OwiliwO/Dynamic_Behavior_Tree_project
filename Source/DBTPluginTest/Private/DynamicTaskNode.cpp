@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "DynamicTaskNode.h"
+
+#if WITH_EDITOR
 #include "DetailWidgetRow.h" 
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -17,7 +19,6 @@
 
 TMap<FObjectKey, bool> FTaskNodeCustomization::DynamicBehaviorFlagsMap;
 TMap<FObjectKey, TSharedPtr<FString>> FTaskNodeCustomization::DynamicBehaviorCategoriesMap;
-TMap<FObjectKey, int32> FTaskNodeCustomization::DynamicBehaviorLimitChangeMap;
 TArray<TSharedPtr<FString>> FTaskNodeCustomization::CategoryOptions;
 
 TSharedRef<IDetailCustomization> FTaskNodeCustomization::MakeInstance()
@@ -107,7 +108,7 @@ void FTaskNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
     }
 
     DetailBuilder.GetObjectsBeingCustomized(CustomizedObjects);
-    
+
     if (CategoryOptions.Num() == 0)
     {
         CategoryOptions.Add(MakeShareable(new FString("Offensive Action")));
@@ -177,7 +178,7 @@ void FTaskNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
                 }
 
                 DetailBuilder.ForceRefreshDetails();
-            })
+                    })
         ];
 
     PluginCategory.AddCustomRow(FText::FromString("Action Category"))
@@ -252,22 +253,6 @@ void FTaskNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
                                     (CategoryOptions.Num() > 0 ? FText::FromString(*CategoryOptions[0]) : FText::FromString(TEXT("None")));
                             })
                 ]
-        ];
-
-    PluginCategory.AddCustomRow(FText::FromString("Limit change"))
-        .NameContent()
-        [
-            SNew(STextBlock)
-                .Text(FText::FromString(TEXT("Limit change")))
-                .ToolTipText(FText::FromString(TEXT("Integer parameter for dynamic behavior, which indicates the presentation of Task")))
-                .Font(MyFont)
-        ]
-        .ValueContent()
-        [
-            CreateIntegerWidget(DetailBuilder, CustomizedObjects, DynamicBehaviorLimitChangeMap,
-                "Limit change",
-                "Set first integer parameter value",
-                0, 100, 0)
         ];
 }
 
@@ -344,3 +329,4 @@ void FTaskNodeCustomization::TrySwapNodesInSameSequence(UObject* Node1, UObject*
 
     SequenceParent->MarkPackageDirty();
 }
+#endif

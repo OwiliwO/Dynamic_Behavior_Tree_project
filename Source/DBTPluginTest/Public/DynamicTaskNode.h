@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+#if WITH_EDITOR
 #include "IDetailCustomization.h"
 #include "Templates/SharedPointer.h"
 #include "Misc/Guid.h"
@@ -15,20 +17,20 @@ public:
 
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
-	static void ClearFlagsMap() { 
+	static void ClearFlagsMap() {
 		DynamicBehaviorFlagsMap.Empty();
 		DynamicBehaviorCategoriesMap.Empty();
-		DynamicBehaviorLimitChangeMap.Empty();
 	}
 
 	static void TrySwapNodesInSameSequence(UObject* Node1, UObject* Node2);
+
+	static const TMap<FObjectKey, TSharedPtr<FString>>& GetDynamicBehaviorCategoriesMap() { return DynamicBehaviorCategoriesMap; }
 private:
-    static TMap<FObjectKey, bool> DynamicBehaviorFlagsMap;
+	static TMap<FObjectKey, bool> DynamicBehaviorFlagsMap;
 	static TMap<FObjectKey, TSharedPtr<FString>> DynamicBehaviorCategoriesMap;
 
-    TArray<TWeakObjectPtr<UObject>> CustomizedObjects;
+	TArray<TWeakObjectPtr<UObject>> CustomizedObjects;
 
 	static TArray<TSharedPtr<FString>> CategoryOptions;
-
-	static TMap<FObjectKey, int32> DynamicBehaviorLimitChangeMap;
 };
+#endif

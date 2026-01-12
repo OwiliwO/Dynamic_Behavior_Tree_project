@@ -2,6 +2,8 @@
 
 #include "DBTPluginTest.h"
 #include "DynamicTaskNode.h"
+#include "DynamicRootNodeCustomization.h"
+#include "AbilityCounterComponent.h"
 #include "AssetTypeActions_Base.h"
 #include "PropertyEditorModule.h"
 #include "BehaviorTree/BTTaskNode.h"
@@ -12,34 +14,39 @@ void FDBTPluginTestModule::StartupModule()
 {
 	GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Plugin loaded!"));
 
+#if WITH_EDITOR
 	RegisterTaskNodeCustomizations();
+#endif
 }
 
 void FDBTPluginTestModule::ShutdownModule()
 {
 	GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Plugin unloaded!"));
 
+#if WITH_EDITOR
 	UnregisterTaskNodeCustomizations();
 
 	FTaskNodeCustomization::ClearFlagsMap();
+#endif
 }
 
+#if WITH_EDITOR
 void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 {
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 			
-		// Список стандартных классов Task для регистрации
+		// List of standard Task classes for registration
 		TArray<FName> TaskClassNames = {
-			FName("BTTaskNode"),                 // Базовый класс всех BT Task
-			FName("BTTask_BlackboardBase"),      // Базовый класс с Blackboard
-			FName("BTTask_BlueprintBase"),       // Blueprint-based задачи
-			FName("BTTask_Wait"),                // Узел Wait
-			FName("BTTask_MoveTo"),              // Узел MoveTo
-			FName("BTTask_RotateToFaceBBEntry"), // Узел RotateToFaceBBEntry
-			FName("BTTask_PlayAnimation"),       // Узел PlayAnimation
-			FName("BTTask_RunEQSQuery")          // Узел RunEQSQuery
+			FName("BTTaskNode"),                 // Base class for all BT Tasks
+			FName("BTTask_BlackboardBase"),      // Base class with Blackboard
+			FName("BTTask_BlueprintBase"),       // Blueprint-based task
+			FName("BTTask_Wait"),                // Task Wait
+			FName("BTTask_MoveTo"),              // Task MoveTo
+			FName("BTTask_RotateToFaceBBEntry"), // Task RotateToFaceBBEntry
+			FName("BTTask_PlayAnimation"),       // Task PlayAnimation
+			FName("BTTask_RunEQSQuery")          // Task RunEQSQuery
 		};
 		
 		int length_standart_class = 0;
@@ -55,14 +62,21 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 
 		if (length_standart_class == TaskClassNames.Num())
 		{
-			GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Standart task node customizations registered successfully"));
+			GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Standart task nodes customizations registered successfully"));
 		}
 	
 		RegisterAllTaskClasses(PropertyModule);
+
+		PropertyModule.RegisterCustomClassLayout(
+			FName("BTCompositeNode"),
+			FOnGetDetailCustomizationInstance::CreateStatic(&FBehaviorTreeRootNodeCustomization::MakeInstance)
+		);
+
+		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Root nodes customizations registered successfully"));
 	
 		PropertyModule.NotifyCustomizationModuleChanged();
 	
-		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: All task node customizations registered successfully"));
+		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: All task nodes customizations registered successfully"));
 	}
 }
 
@@ -96,41 +110,15 @@ void FDBTPluginTestModule::UnregisterTaskNodeCustomizations()
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
-		TArray<FName> TaskClassNames = {
-			FName("BTTaskNode"),
-			FName("BTTask_BlackboardBase"),
-			FName("BTTask_BlueprintBase"),
-			FName("BTTask_Wait"),
-			FName("BTTask_MoveTo"),
-			FName("BTTask_RotateToFaceBBEntry"),
-			FName("BTTask_PlayAnimation"),
-			FName("BTTask_RunEQSQuery")
-		};
-
-		for (const FName& ClassName : TaskClassNames)
-		{
-			PropertyModule.UnregisterCustomClassLayout(ClassName);
-		}
-
-		UClass* BTTaskNodeClass = UBTTaskNode::StaticClass();
-
-		for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
-		{
-			UClass* CurrentClass = *ClassIt;
-
-			if (CurrentClass->IsChildOf(BTTaskNodeClass))
-			{
-				if (CurrentClass != BTTaskNodeClass &&
-					!CurrentClass->GetName().StartsWith("BTTask_"))
-				{
-					PropertyModule.UnregisterCustomClassLayout(CurrentClass->GetFName());
-				}
-			}
-		}
+		PropertyModule.UnregisterCustomClassLayout(FName("DynamicBTTaskNode"));
+		PropertyModule.UnregisterCustomClassLayout(FName("DynamicBTCompositeNode"));
 
 		PropertyModule.NotifyCustomizationModuleChanged();
+
+		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Dynamic node customizations unregistered"));
 	}
 }
+#endif
 
 void FDBTPluginTestModule::RegisterAssetTypeAction(IAssetTools& AssetTools, TSharedRef<class IAssetTypeActions> Action)
 {
