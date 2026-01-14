@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "DBTPluginTest.h"
+#include "DBTBehaviorTreeDataManager.h"
 #include "DynamicTaskNode.h"
 #include "DynamicRootNodeCustomization.h"
 #include "AbilityCounterComponent.h"
@@ -28,6 +29,8 @@ void FDBTPluginTestModule::ShutdownModule()
 
 	FTaskNodeCustomization::ClearFlagsMap();
 #endif
+
+	UDBTBehaviorTreeDataManager::Release();
 }
 
 #if WITH_EDITOR
@@ -36,7 +39,7 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-			
+
 		// List of standard Task classes for registration
 		TArray<FName> TaskClassNames = {
 			FName("BTTaskNode"),                 // Base class for all BT Tasks
@@ -48,7 +51,7 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 			FName("BTTask_PlayAnimation"),       // Task PlayAnimation
 			FName("BTTask_RunEQSQuery")          // Task RunEQSQuery
 		};
-		
+
 		int length_standart_class = 0;
 		for (const FName& ClassName : TaskClassNames)
 		{
@@ -64,7 +67,7 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 		{
 			GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Standart task nodes customizations registered successfully"));
 		}
-	
+
 		RegisterAllTaskClasses(PropertyModule);
 
 		PropertyModule.RegisterCustomClassLayout(
@@ -73,9 +76,9 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 		);
 
 		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Root nodes customizations registered successfully"));
-	
+
 		PropertyModule.NotifyCustomizationModuleChanged();
-	
+
 		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: All task nodes customizations registered successfully"));
 	}
 }
@@ -83,7 +86,7 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 void FDBTPluginTestModule::RegisterAllTaskClasses(FPropertyEditorModule& PropertyModule)
 {
 	UClass* BTTaskNodeClass = UBTTaskNode::StaticClass();
-	
+
 	for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
 	{
 		UClass* CurrentClass = *ClassIt;
@@ -127,5 +130,5 @@ void FDBTPluginTestModule::RegisterAssetTypeAction(IAssetTools& AssetTools, TSha
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FDBTPluginTestModule, DBTPluginTest)

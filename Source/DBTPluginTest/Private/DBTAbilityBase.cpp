@@ -3,10 +3,14 @@
 #include "DBTAbilityBase.h"
 #include "AbilityCounterComponent.h"
 #include "AbilityCategoryUtils.h"
+#include "AIController.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTTaskNode.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "DBTBehaviorTreeDataManager.h"
 
 #if WITH_EDITOR
 #include "DynamicRootNodeCustomization.h"
@@ -54,150 +58,184 @@ void UDBTAbilityBase::IncrementUsageCount()
     }
     else
     {
-        GLog->Logf(ELogVerbosity::Display,
-            TEXT("DBTAbilityBase: %s (Category: %s) used %d times"),
-            *GetClass()->GetName(),
-            *UAbilityCategoryUtils::CategoryToText(ActionCategory).ToString(),
-            UsageCount);
+        GLog->Logf(ELogVerbosity::Display, TEXT("DBTAbilityBase: %s (Category: %s) used %d times"), *GetClass()->GetName(), *UAbilityCategoryUtils::CategoryToText(ActionCategory).ToString(), UsageCount);
     }
 
-    CheckBehaviorTreesUsage();
+    CheckAllBehaviorTreesOnAbilityUse();
 }
 
-void UDBTAbilityBase::CheckBehaviorTreesUsage()
+void UDBTAbilityBase::CheckAllBehaviorTreesOnAbilityUse()
 {
-    TArray<UBehaviorTree*> AllBehaviorTrees;
-
-    for (TObjectIterator<UBehaviorTree> It; It; ++It)
+    if (!GetWorld())
     {
-        if (It->GetWorld() == GetWorld())
-        {
-            AllBehaviorTrees.Add(*It);
-        }
-    }
-
-    FString AbilityCategoryString = UAbilityCategoryUtils::CategoryToText(ActionCategory).ToString();
-
-    GLog->Logf(ELogVerbosity::Display, TEXT("DBTAbilityBase: Checking %d Behavior Trees for UsageCount %d, Ability Category: %s"),
-        AllBehaviorTrees.Num(), UsageCount, *AbilityCategoryString);
-
-    for (UBehaviorTree* BehaviorTree : AllBehaviorTrees)
-    {
-        if (!BehaviorTree || !BehaviorTree->RootNode)
-            continue;
-
-        CheckCompositeNodeForLimit(BehaviorTree->RootNode, UsageCount, AbilityCategoryString, BehaviorTree->GetName());
-    }
-}
-
-void UDBTAbilityBase::CheckCompositeNodeForLimit(UBTCompositeNode* CompositeNode, int32 CurrentUsageCount,
-    const FString& AbilityCategory, const FString& TreeName)
-{
-    if (!CompositeNode)
+        GLog->Logf(ELogVerbosity::Display, TEXT("DBTAbilityBase: No world found for ability check"));
         return;
-
-#if WITH_EDITOR
-    FObjectKey NodeKey(CompositeNode);
-    const TMap<FObjectKey, int32>& RootLimitChangeMap = FBehaviorTreeRootNodeCustomization::GetRootLimitChangeMap();
-    const int32* LimitChangePtr = RootLimitChangeMap.Find(NodeKey);
-
-    if (LimitChangePtr)
-    {
-        int32 LimitChange = *LimitChangePtr;
-
-        GLog->Logf(ELogVerbosity::Display,
-            TEXT("DBTAbilityBase: Tree '%s' - Node '%s' has LimitChange: %d, Current UsageCount: %d, Ability Category: %s"),
-            *TreeName, *CompositeNode->GetName(), LimitChange, CurrentUsageCount, *AbilityCategory);
-
-        if (CurrentUsageCount >= LimitChange && LimitChange > 0)
-        {
-            bool bHasMatchingCategory = CheckChildNodesCategory(CompositeNode, AbilityCategory, TreeName);
-
-            if (bHasMatchingCategory)
-            {
-                GLog->Logf(ELogVerbosity::Warning,
-                    TEXT("DBTAbilityBase: USAGE LIMIT REACHED with matching category! Tree '%s' - Node '%s': ")
-                    TEXT("UsageCount %d >= LimitChange %d, Category: %s"),
-                    *TreeName, *CompositeNode->GetName(), CurrentUsageCount, LimitChange, *AbilityCategory);
-
-                //ChangeNodePriority(CompositeNode, AbilityCategory, TreeName);
-            }
-            else
-            {
-                GLog->Logf(ELogVerbosity::Display,
-                    TEXT("DBTAbilityBase: Usage limit reached but category doesn't match for any child node. Ability Category: %s"),
-                    *AbilityCategory);
-            }
-        }
     }
-#endif
 
-    for (const FBTCompositeChild& Child : CompositeNode->Children)
+    GLog->Logf(ELogVerbosity::Display, TEXT("=== Starting Behavior Tree Check for Ability: %s ==="), *GetClass()->GetName());
+
+    TArray<int32> FoundLimitChanges;
+
+    for (TActorIterator<AAIController> It(GetWorld()); It; ++It)
+    {
+        AAIController* AIController = *It;
+        if (!AIController || !AIController->IsValidLowLevel())
+        {
+            continue;
+        }
+
+        UBehaviorTreeComponent* BTComponent = Cast<UBehaviorTreeComponent>(
+            AIController->GetBrainComponent());
+
+        if (!BTComponent)
+        {
+            continue;
+        }
+
+        UBehaviorTree* BehaviorTree = BTComponent->GetCurrentTree();
+        if (!BehaviorTree || !BehaviorTree->RootNode)
+        {
+            continue;
+        }
+
+        GLog->Logf(ELogVerbosity::Display, TEXT("Checking AI Controller: %s, Behavior Tree: %s"), *AIController->GetName(), *BehaviorTree->GetName());
+
+        CheckCompositeNodeRecursive(BehaviorTree->RootNode);
+
+        CollectCompositeNodeLimitChanges(BehaviorTree->RootNode, FoundLimitChanges);
+    }
+
+    GLog->Logf(ELogVerbosity::Display, TEXT("=== Finished Behavior Tree Check ==="));
+
+    CheckForUsageCountReset(FoundLimitChanges);
+}
+
+void UDBTAbilityBase::CollectCompositeNodeLimitChanges(UBTCompositeNode* Node, TArray<int32>& LimitChanges)
+{
+    if (!Node)
+    {
+        return;
+    }
+
+    UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+    int32 LimitChange = DataManager.GetLimitChangeForNode(Node);
+
+    if (LimitChange > 0)
+    {
+        LimitChanges.Add(LimitChange);
+        GLog->Logf(ELogVerbosity::Display, TEXT("[LIMIT COLLECTION] Found LimitChange: %d for node: %s"),
+            LimitChange, *Node->GetName());
+    }
+
+    for (const FBTCompositeChild& Child : Node->Children)
     {
         if (Child.ChildComposite)
         {
-            CheckCompositeNodeForLimit(Child.ChildComposite, CurrentUsageCount, AbilityCategory, TreeName);
+            CollectCompositeNodeLimitChanges(Child.ChildComposite, LimitChanges);
         }
     }
 }
 
-bool UDBTAbilityBase::CheckChildNodesCategory(UBTCompositeNode* CompositeNode, const FString& AbilityCategory, const FString& TreeName)
+void UDBTAbilityBase::CheckForUsageCountReset(const TArray<int32>& LimitChanges)
 {
-    bool bFoundMatchingCategory = false;
-
-    for (const FBTCompositeChild& Child : CompositeNode->Children)
+    if (LimitChanges.Num() == 0)
     {
-        if (Child.ChildTask)
+        GLog->Logf(ELogVerbosity::Display, TEXT("[RESET CHECK] No LimitChanges found. Skipping reset check."));
+        return;
+    }
+
+    int32 MaxLimitChange = LimitChanges[0];
+    for (int32 i = 1; i < LimitChanges.Num(); i++)
+    {
+        if (LimitChanges[i] > MaxLimitChange)
         {
-            FString TaskCategory = GetTaskNodeCategory(Child.ChildTask);
+            MaxLimitChange = LimitChanges[i];
+        }
+    }
 
-            if (!TaskCategory.IsEmpty())
+    GLog->Logf(ELogVerbosity::Display, TEXT("[RESET CHECK] Max LimitChange: %d, Current UsageCount: %d"), MaxLimitChange, UsageCount);
+
+    if (UsageCount == MaxLimitChange)
+    {
+        FString AbilityOwnerName = TEXT("Unknown");
+        if (CurrentActorInfo && CurrentActorInfo->AvatarActor.IsValid())
+        {
+            AbilityOwnerName = CurrentActorInfo->AvatarActor->GetName();
+        }
+
+        GLog->Logf(ELogVerbosity::Display, TEXT("[RESET TRIGGERED] UsageCount (%d) equals MaxLimitChange (%d)!"), UsageCount, MaxLimitChange);
+
+        GLog->Logf(ELogVerbosity::Display, TEXT("[RESET TRIGGERED] Ability: %s, Owner: %s"), *GetClass()->GetName(), *AbilityOwnerName);
+
+        int32 OldUsageCount = UsageCount;
+        UsageCount = 0;
+
+        if (CurrentActorInfo && CurrentActorInfo->AvatarActor.IsValid())
+        {
+            AActor* AvatarActor = CurrentActorInfo->AvatarActor.Get();
+            if (UAbilityCounterComponent* Counter = AvatarActor->FindComponentByClass<UAbilityCounterComponent>())
             {
-                GLog->Logf(ELogVerbosity::Verbose,
-                    TEXT("DBTAbilityBase: Tree '%s' - Task '%s' has category: %s, Ability category: %s"),
-                    *TreeName, *Child.ChildTask->GetName(), *TaskCategory, *AbilityCategory);
-
-                if (TaskCategory.Equals(AbilityCategory, ESearchCase::IgnoreCase))
-                {
-                    bFoundMatchingCategory = true;
-                    GLog->Logf(ELogVerbosity::Display,
-                        TEXT("DBTAbilityBase: Category match found! Task '%s' category '%s' matches ability category"),
-                        *Child.ChildTask->GetName(), *TaskCategory);
-                }
+                Counter->ResetAllCounters();
             }
         }
+
+        GLog->Logf(ELogVerbosity::Display, TEXT("[RESET COMPLETE] UsageCount reset from %d to %d"), OldUsageCount, UsageCount);
     }
-
-    return bFoundMatchingCategory;
-}
-
-FString UDBTAbilityBase::GetTaskNodeCategory(UBTTaskNode* TaskNode)
-{
-    if (!TaskNode)
-        return FString();
-
-#if WITH_EDITOR
-    FObjectKey NodeKey(TaskNode);
-    const TMap<FObjectKey, TSharedPtr<FString>>& DynamicBehaviorCategoriesMap = FTaskNodeCustomization::GetDynamicBehaviorCategoriesMap();
-    const TSharedPtr<FString>* CategoryPtr = DynamicBehaviorCategoriesMap.Find(NodeKey);
-
-    if (CategoryPtr && CategoryPtr->IsValid())
+    else
     {
-        return **CategoryPtr;
+        GLog->Logf(ELogVerbosity::Display, TEXT("[RESET CHECK] Reset condition not met."));
     }
-#endif
-
-    return FString();
 }
 
-void UDBTAbilityBase::CheckTaskNodeForUsage(UBTTaskNode* TaskNode, int32 CurrentUsageCount, const FString& TreeName)
+void UDBTAbilityBase::CheckCompositeNodeRecursive(UBTCompositeNode* Node)
 {
-    if (!TaskNode)
+    if (!Node)
+    {
         return;
+    }
 
-    FString TaskCategory = GetTaskNodeCategory(TaskNode);
+    CheckSingleCompositeNode(Node);
 
-    GLog->Logf(ELogVerbosity::Verbose,
-        TEXT("DBTAbilityBase: Tree '%s' - Task '%s' (Category: %s) checked with UsageCount: %d"),
-        *TreeName, *TaskNode->GetName(), *TaskCategory, CurrentUsageCount);
+    for (const FBTCompositeChild& Child : Node->Children)
+    {
+        if (Child.ChildComposite)
+        {
+            CheckCompositeNodeRecursive(Child.ChildComposite);
+        }
+    }
+}
+
+bool UDBTAbilityBase::CheckSingleCompositeNode(UBTCompositeNode* Node)
+{
+    if (!Node)
+    {
+        return false;
+    }
+
+    UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+    int32 LimitChange = DataManager.GetLimitChangeForNode(Node);
+
+    if (LimitChange > 0)
+    {
+        bool bConditionMet = (LimitChange >= UsageCount);
+
+        if (bConditionMet)
+        {
+            FString AbilityOwnerName = TEXT("Unknown");
+            if (CurrentActorInfo && CurrentActorInfo->AvatarActor.IsValid())
+            {
+                AbilityOwnerName = CurrentActorInfo->AvatarActor->GetName();
+            }
+
+            GLog->Logf(ELogVerbosity::Display, TEXT("[BEHAVIOR TREE CHECK] Condition MET! Ability: %s, Usage: %d, LimitChange: %d"), *GetClass()->GetName(), UsageCount, LimitChange);
+
+            return true;
+        }
+        else
+        {
+            GLog->Logf(ELogVerbosity::Display, TEXT("[BEHAVIOR TREE CHECK] Condition NOT met. Ability: %s, Usage: %d, LimitChange: %d, Node: %s"), *GetClass()->GetName(), UsageCount, LimitChange, *Node->GetName());
+        }
+    }
+
+    return false;
 }

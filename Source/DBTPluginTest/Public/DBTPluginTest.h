@@ -18,6 +18,6 @@ private:
 	void RegisterTaskNodeCustomizations();
 	void RegisterAllTaskClasses(FPropertyEditorModule& PropertyModule);
 	void UnregisterTaskNodeCustomizations();
-	
+
 	TArray<TSharedPtr<class IAssetTypeActions>> CreatedAssetTypeActions;
 };

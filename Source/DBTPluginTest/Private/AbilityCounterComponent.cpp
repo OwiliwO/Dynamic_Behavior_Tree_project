@@ -17,11 +17,11 @@ void UAbilityCounterComponent::BeginPlay()
 
 int32 UAbilityCounterComponent::GetAbilityUsageCount(TSubclassOf<UGameplayAbility> AbilityClass) const
 {
-	if (!AbilityClass) return 0;
+    if (!AbilityClass) return 0;
 
-	FString AbilityName = AbilityClass->GetName();
-	const int32* Count = AbilityUsageMap.Find(AbilityName);
-	return Count ? *Count : 0;
+    FString AbilityName = AbilityClass->GetName();
+    const int32* Count = AbilityUsageMap.Find(AbilityName);
+    return Count ? *Count : 0;
 }
 
 int32 UAbilityCounterComponent::GetAbilityUsageCountByName(const FString& AbilityClassName) const

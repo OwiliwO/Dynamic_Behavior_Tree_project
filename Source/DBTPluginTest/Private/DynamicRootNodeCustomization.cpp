@@ -7,6 +7,7 @@
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "BehaviorTree/BTCompositeNode.h"
+#include "DBTBehaviorTreeDataManager.h"
 
 TMap<FObjectKey, int32> FBehaviorTreeRootNodeCustomization::RootLimitChangeMap;
 
@@ -64,18 +65,17 @@ void FBehaviorTreeRootNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& 
                 .Value_Lambda([this]() -> int32 {
                 if (CustomizedObjects.Num() == 0) return 0;
 
-                FObjectKey FirstKey(CustomizedObjects[0].Get());
-                int32* FirstValue = RootLimitChangeMap.Find(FirstKey);
-                int32 FirstVal = FirstValue ? *FirstValue : 0;
+                UObject* FirstObj = CustomizedObjects[0].Get();
+                if (!FirstObj) return 0;
+
+                UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+                int32 FirstVal = DataManager.GetLimitChangeForNode(FirstObj);
 
                 for (int32 i = 1; i < CustomizedObjects.Num(); i++)
                 {
                     if (UObject* Obj = CustomizedObjects[i].Get())
                     {
-                        FObjectKey Key(Obj);
-                        int32* Value = RootLimitChangeMap.Find(Key);
-                        int32 CurrentVal = Value ? *Value : 0;
-
+                        int32 CurrentVal = DataManager.GetLimitChangeForNode(Obj);
                         if (CurrentVal != FirstVal)
                         {
                             return 0;
@@ -86,14 +86,23 @@ void FBehaviorTreeRootNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& 
                 return FirstVal;
                     })
                 .OnValueChanged_Lambda([this, &DetailBuilder](int32 NewValue) {
+                UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+
                 for (TWeakObjectPtr<UObject> ObjPtr : CustomizedObjects)
                 {
                     if (UObject* Obj = ObjPtr.Get())
                     {
-                        FObjectKey Key(Obj);
-                        RootLimitChangeMap.Add(Key, NewValue);
+                        DataManager.SetLimitChangeForNode(Obj, NewValue);
 
                         GLog->Logf(ELogVerbosity::Display, TEXT("Root Limit Change for %s set to: %d"), *Obj->GetName(), NewValue);
+                    }
+                }
+
+                for (TWeakObjectPtr<UObject> ObjPtr : CustomizedObjects)
+                {
+                    if (UObject* Obj = ObjPtr.Get())
+                    {
+                        Obj->MarkPackageDirty();
                     }
                 }
 

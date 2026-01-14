@@ -22,8 +22,6 @@ public:
 		DynamicBehaviorCategoriesMap.Empty();
 	}
 
-	static void TrySwapNodesInSameSequence(UObject* Node1, UObject* Node2);
-
 	static const TMap<FObjectKey, TSharedPtr<FString>>& GetDynamicBehaviorCategoriesMap() { return DynamicBehaviorCategoriesMap; }
 private:
 	static TMap<FObjectKey, bool> DynamicBehaviorFlagsMap;

@@ -38,19 +38,13 @@ protected:
     void IncrementUsageCount();
 
 private:
-    void CheckBehaviorTreesUsage();
+    void CheckAllBehaviorTreesOnAbilityUse();
+    
+    void CheckCompositeNodeRecursive(UBTCompositeNode* Node);
 
-    void CheckCompositeNodeForLimit(UBTCompositeNode* CompositeNode, int32 CurrentUsageCount,
-        const FString& AbilityCategory, const FString& TreeName);
+    bool CheckSingleCompositeNode(UBTCompositeNode* Node);
 
-    bool CheckChildNodesCategory(UBTCompositeNode* CompositeNode, const FString& AbilityCategory,
-        const FString& TreeName);
+    void CollectCompositeNodeLimitChanges(UBTCompositeNode* Node, TArray<int32>& LimitChanges);
 
-    FString GetTaskNodeCategory(UBTTaskNode* TaskNode);
-
-    /*void ChangeNodePriority(UBTCompositeNode* CompositeNode, const FString& Category,
-        const FString& TreeName);*/
-
-    void CheckTaskNodeForUsage(UBTTaskNode* TaskNode, int32 CurrentUsageCount,
-        const FString& TreeName);
+    void CheckForUsageCountReset(const TArray<int32>& LimitChanges);
 };
