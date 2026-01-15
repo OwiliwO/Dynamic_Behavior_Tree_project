@@ -4,6 +4,7 @@
 #include "DBTBehaviorTreeDataManager.h"
 #include "DynamicTaskNode.h"
 #include "DynamicRootNodeCustomization.h"
+#include "DynamicAIControllerCustomization.h"
 #include "AbilityCounterComponent.h"
 #include "AssetTypeActions_Base.h"
 #include "PropertyEditorModule.h"
@@ -75,6 +76,11 @@ void FDBTPluginTestModule::RegisterTaskNodeCustomizations()
 			FOnGetDetailCustomizationInstance::CreateStatic(&FBehaviorTreeRootNodeCustomization::MakeInstance)
 		);
 
+		PropertyModule.RegisterCustomClassLayout(
+			FName("AIController"),
+			FOnGetDetailCustomizationInstance::CreateStatic(&FDynamicAIControllerCustomization::MakeInstance)
+		);
+
 		GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Root nodes customizations registered successfully"));
 
 		PropertyModule.NotifyCustomizationModuleChanged();
@@ -115,6 +121,8 @@ void FDBTPluginTestModule::UnregisterTaskNodeCustomizations()
 
 		PropertyModule.UnregisterCustomClassLayout(FName("DynamicBTTaskNode"));
 		PropertyModule.UnregisterCustomClassLayout(FName("DynamicBTCompositeNode"));
+
+		PropertyModule.UnregisterCustomClassLayout(FName("AIController"));
 
 		PropertyModule.NotifyCustomizationModuleChanged();
 

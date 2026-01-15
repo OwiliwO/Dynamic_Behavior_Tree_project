@@ -10,6 +10,22 @@
 class UBTCompositeNode;
 class UBTTaskNode;
 class UBehaviorTreeComponent;
+//class AAIController;
+//class AActor;
+
+struct FTaskNodeInfo
+{
+    UBTTaskNode* TaskNode;
+    UBTCompositeNode* ParentComposite;
+    int32 ChildIndex;
+
+    FTaskNodeInfo(UBTTaskNode* InTaskNode = nullptr, UBTCompositeNode* InParentComposite = nullptr, int32 InChildIndex = -1)
+        : TaskNode(InTaskNode)
+        , ParentComposite(InParentComposite)
+        , ChildIndex(InChildIndex)
+    {
+    }
+};
 
 UCLASS(Abstract, Blueprintable)
 class DBTPLUGINTEST_API UDBTAbilityBase : public UGameplayAbility
@@ -47,4 +63,10 @@ private:
     void CollectCompositeNodeLimitChanges(UBTCompositeNode* Node, TArray<int32>& LimitChanges);
 
     void CheckForUsageCountReset(const TArray<int32>& LimitChanges);
+
+    void GetAllTaskNodesFromComposite(UBTCompositeNode* Composite, TArray<class UBTTaskNode*>& OutTaskNodes);
+
+    void GetAllTaskNodesWithInfo(UBTCompositeNode* Composite, TArray<struct FTaskNodeInfo>& OutTaskNodes);
+    
+    void SwapTaskNodePriorities(TArray<struct FTaskNodeInfo>& FirstArray, TArray<struct FTaskNodeInfo>& SecondArray);
 };

@@ -171,9 +171,15 @@ void FTaskNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
                         FObjectKey Key(Obj);
                         DynamicBehaviorFlagsMap.Add(Key, bNewValue);
 
-                        GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Dynamic Behavior flag for %s set to: %s"),
-                            *Obj->GetName(),
-                            bNewValue ? TEXT("True") : TEXT("False"));
+                        UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+                        FString CurrentCategory = DataManager.GetTaskNodeCategory(Obj);
+                        if (CurrentCategory.IsEmpty() && CategoryOptions.Num() > 0)
+                        {
+                            CurrentCategory = *CategoryOptions[0];
+                        }
+                        DataManager.SetTaskNodeDynamicData(Obj, bNewValue, CurrentCategory);
+
+                        GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior Tree Plugin: Dynamic Behavior flag for %s set to: %s"), *Obj->GetName(), bNewValue ? TEXT("True") : TEXT("False"));
                     }
                 }
 
@@ -206,10 +212,11 @@ void FTaskNodeCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
                                 FObjectKey Key(Obj);
                                 DynamicBehaviorCategoriesMap.Add(Key, NewValue);
 
-                                GLog->Logf(ELogVerbosity::Display,
-                                    TEXT("Category for %s set to: %s"),
-                                    *Obj->GetName(),
-                                    **NewValue);
+                                UDBTBehaviorTreeDataManager& DataManager = UDBTBehaviorTreeDataManager::Get();
+                                bool bIsDynamic = DataManager.GetTaskNodeIsDynamic(Obj);
+                                DataManager.SetTaskNodeDynamicData(Obj, bIsDynamic, *NewValue);
+
+                                GLog->Logf(ELogVerbosity::Display, TEXT("Category for %s set to: %s"), *Obj->GetName(), **NewValue);
                             }
                         }
 
