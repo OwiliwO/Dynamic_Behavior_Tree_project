@@ -9,6 +9,12 @@
 #include "Widgets/Text/STextBlock.h"
 #include "AIController.h"
 #include "DBTBehaviorTreeDataManager.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Misc/FileHelper.h"
+#include "HAL/PlatformFilemanager.h"
+#include "Misc/Paths.h"
+#include "GameFramework/Character.h"
 
 TSharedRef<IDetailCustomization> FDynamicAIControllerCustomization::MakeInstance()
 {
@@ -86,6 +92,16 @@ void FDynamicAIControllerCustomization::CustomizeDetails(IDetailLayoutBuilder& D
                     {
                         DataManager.SetAIControllerDynamicBehaviorFlag(Obj, bNewValue);
                         GLog->Logf(ELogVerbosity::Display, TEXT("Dynamic Behavior flag for AI Controller %s set to: %s"), *Obj->GetName(), bNewValue ? TEXT("True") : TEXT("False"));
+
+						if (bNewValue)
+						{
+							int32 TimeLimit = DataManager.GetAIControllerTimeLimit(Obj);
+							if (TimeLimit == 0)
+							{
+								DataManager.SetAIControllerTimeLimit(Obj, 5);
+								GLog->Logf(ELogVerbosity::Display, TEXT("Time Limit for AI Controller %s set to default value: 5"), *Obj->GetName());
+							}
+						}
                     }
                 }
 
@@ -136,6 +152,8 @@ void FDynamicAIControllerCustomization::CustomizeDetails(IDetailLayoutBuilder& D
                     if (UObject* Obj = ObjPtr.Get())
                     {
                         DataManager.SetAIControllerTimeLimit(Obj, NewValue);
+                        DataManager.SetGlobalAdjustmentDelay(FMath::Max(DataManager.GetGlobalAdjustmentDelay(), (float)NewValue));
+                        
                         GLog->Logf(ELogVerbosity::Display, TEXT("Time Limit for AI Controller %s set to: %d"), *Obj->GetName(), NewValue);
                     }
                 }

@@ -47,6 +47,15 @@ public:
 	int32 GetAIControllerTimeLimit(UObject* AIController) const;
 
     UFUNCTION(BlueprintCallable, Category = "Dynamic Behavior Tree")
+    void SetGlobalAdjustmentDelay(float DelaySeconds);
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dynamic Behavior Tree")
+    float GetGlobalAdjustmentDelay() const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dynamic Behavior Tree")
+    bool IsAnyAIControllerDynamicBehaviorEnabled() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Dynamic Behavior Tree")
     void ClearAllData();
 
 protected:
@@ -64,6 +73,9 @@ protected:
     
     UPROPERTY()
     TMap<TWeakObjectPtr<UObject>, int32> AIControllerTimeLimits;
+
+    UPROPERTY()
+    float GlobalAdjustmentDelay = 5.0f;
 
     static UDBTBehaviorTreeDataManager* Instance;
 };

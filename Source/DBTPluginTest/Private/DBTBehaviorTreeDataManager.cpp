@@ -96,8 +96,7 @@ void UDBTBehaviorTreeDataManager::SetAIControllerDynamicBehaviorFlag(UObject* AI
     if (AIController && AIController->IsA<AAIController>())
     {
         AIControllerDynamicBehaviorFlags.Add(AIController, bFlag);
-        GLog->Logf(ELogVerbosity::Display, TEXT("Set DynamicBehaviorFlag for AI Controller %s: %s"),
-            *AIController->GetName(), bFlag ? TEXT("True") : TEXT("False"));
+        GLog->Logf(ELogVerbosity::Display, TEXT("Set DynamicBehaviorFlag for AI Controller %s: %s"), *AIController->GetName(), bFlag ? TEXT("True") : TEXT("False"));
     }
 }
 
@@ -131,6 +130,29 @@ int32 UDBTBehaviorTreeDataManager::GetAIControllerTimeLimit(UObject* AIControlle
 
     const int32* ValuePtr = AIControllerTimeLimits.Find(AIController);
     return ValuePtr && AIController->IsValidLowLevel() ? *ValuePtr : 0;
+}
+
+void UDBTBehaviorTreeDataManager::SetGlobalAdjustmentDelay(float DelaySeconds)
+{
+    GlobalAdjustmentDelay = DelaySeconds;
+    GLog->Logf(ELogVerbosity::Display, TEXT("DBTBehaviorTreeDataManager: Global adjustment delay set to: %.1f seconds"), DelaySeconds);
+}
+
+float UDBTBehaviorTreeDataManager::GetGlobalAdjustmentDelay() const
+{
+    return GlobalAdjustmentDelay;
+}
+
+bool UDBTBehaviorTreeDataManager::IsAnyAIControllerDynamicBehaviorEnabled() const
+{
+    for (const auto& Pair : AIControllerDynamicBehaviorFlags)
+    {
+        if (Pair.Key.IsValid() && Pair.Value)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void UDBTBehaviorTreeDataManager::ClearAllData()
